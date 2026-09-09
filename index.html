@@ -51,6 +51,35 @@
   .divider{ width:70px; height:2px; background:var(--gold); margin:22px auto; opacity:.8;}
   .eyebrow{ font-size:.72rem; letter-spacing:.14em; color:var(--leaf); margin-bottom:6px; }
 
+  /* ---------- SPLASH INTRO: date stamp ---------- */
+  #splash-screen{
+    position:fixed; inset:0; z-index:999;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 40%, #8f1a26 0%, var(--maroon) 55%, #4d0b12 100%);
+  }
+
+  .stamp-ring{
+    position:absolute; width:220px; height:220px; border-radius:50%;
+    border:2px solid var(--light-gold); opacity:0; transform:scale(.4);
+  }
+  .stamp-box{
+    position:relative;
+    border:3px double var(--light-gold);
+    border-radius:8px;
+    padding:20px 36px;
+    text-align:center;
+    opacity:0;
+    transform:scale(3) rotate(-8deg);
+  }
+  .stamp-label{
+    font-size:.68rem; letter-spacing:.28em; text-transform:uppercase;
+    color:#e9dcb8; margin-bottom:6px;
+  }
+  .stamp-date{
+    font-family:'Cormorant Garamond', serif; font-weight:600;
+    font-size:2.3rem; letter-spacing:.05em; color:var(--light-gold);
+  }
+
   /* ---------- HERO ---------- */
   .hero{
     background:radial-gradient(circle at 50% 0%, #8f1a26 0%, var(--maroon) 55%, #5c0d16 100%);
@@ -135,6 +164,19 @@
      restore an `animation:` declaration on the relevant class. */
   .groom-sway, .bride-sway, .blink-groom, .blink-bride, .garland-swing{
     animation:none;
+  }
+
+  /* One-shot "wake up" blink for the long-press easter egg on the section
+     headings (JS sets these as an inline animation, once, then clears it —
+     see headingLongPress below). Separate from the idle-loop keyframes
+     above (which stay removed) since this only ever needs to play once. */
+  @keyframes wake-blink-groom{
+    0%, 100% { transform:translate(172px,106px) scaleY(1) translate(-172px,-106px); }
+    50%      { transform:translate(172px,106px) scaleY(0.08) translate(-172px,-106px); }
+  }
+  @keyframes wake-blink-bride{
+    0%, 100% { transform:translate(246px,106px) scaleY(1) translate(-246px,-106px); }
+    50%      { transform:translate(246px,106px) scaleY(0.08) translate(-246px,-106px); }
   }
 
   /* ---------- DETAIL CARDS ---------- */
@@ -395,6 +437,15 @@
 </head>
 <body>
 
+<!-- ===== Splash intro: date stamps down like a rubber stamp ===== -->
+<div id="splash-screen" aria-hidden="true">
+  <div class="stamp-ring"></div>
+  <div class="stamp-box">
+    <div class="stamp-label">Save the Date</div>
+    <div class="stamp-date">02 . 11 . 2026</div>
+  </div>
+</div>
+
 <!-- ===== Garland-shaped scroll progress bar ===== -->
 <!-- Wave path matches the hero's frame-top garland motif (Q...T...T...T)
      for visual consistency. The gold "fill" path reveals via stroke-dashoffset
@@ -586,8 +637,8 @@
         <!-- Bride (right) -->
         <g class="bride-sway">
           <!-- saree skirt -->
-          <path d="M231,150 Q271,300 226,320 L306,320 Q276,300 261,150 Z" fill="#A31621"/>
-          <path d="M241,150 Q276,290 246,320" stroke="#E8C468" stroke-width="4" fill="none" opacity=".8"/>
+          <path d="M231,150 Q215,240 206,320 L286,320 Q277,240 261,150 Z" fill="#A31621"/>
+          <path d="M251,150 Q244,240 238,320" stroke="#E8C468" stroke-width="4" fill="none" opacity=".8"/>
           <!-- saree pallu -->
           <path d="M248,150 Q226,190 248,236 Q260,196 248,150 Z" fill="#7A1220" stroke="#E8C468" stroke-width="1.5"/>
           <!-- blouse/neck -->
@@ -818,6 +869,59 @@
     if(isMobile && navigator.vibrate){ navigator.vibrate(ms || 10); }
   }
 
+  // ---------- Long-press on a section heading: illustration "wakes up" ----------
+  // Not mobile-gated like the tilt/shake features above — Pointer Events unify
+  // touch-hold and mouse-hold, so this works the same way on desktop too.
+  (function headingLongPress(){
+    var LONG_PRESS_MS = 650;
+    var BLINK_MS = 450;
+
+    document.querySelectorAll('.couple-section h2.display').forEach(function(heading){
+      var section = heading.closest('.couple-section');
+      if(!section) return;
+
+      var blinkGroom = section.querySelector('.blink-groom');
+      var blinkBride = section.querySelector('.blink-bride');
+      if(!blinkGroom && !blinkBride) return;
+
+      var pressTimer = null;
+      var staggerTimer = null;
+
+      function clearInlineAnim(e){
+        e.target.style.animation = '';
+      }
+      if(blinkGroom){ blinkGroom.addEventListener('animationend', clearInlineAnim); }
+      if(blinkBride){ blinkBride.addEventListener('animationend', clearInlineAnim); }
+
+      function wake(){
+        hapticPulse(12);
+        if(blinkGroom){
+          blinkGroom.style.animation = 'wake-blink-groom ' + BLINK_MS + 'ms ease-in-out 1';
+        }
+        if(blinkBride){
+          // Slight natural stagger so both don't blink in perfect unison.
+          staggerTimer = setTimeout(function(){
+            blinkBride.style.animation = 'wake-blink-bride ' + BLINK_MS + 'ms ease-in-out 1';
+          }, 160);
+        }
+      }
+
+      function startPress(){
+        pressTimer = setTimeout(wake, LONG_PRESS_MS);
+      }
+      function cancelPress(){
+        clearTimeout(pressTimer);
+        clearTimeout(staggerTimer);
+      }
+
+      heading.style.cursor = 'pointer';
+      heading.addEventListener('pointerdown', startPress);
+      heading.addEventListener('pointerup', cancelPress);
+      heading.addEventListener('pointerleave', cancelPress);
+      heading.addEventListener('pointercancel', cancelPress);
+    });
+  })();
+
   // Splits an element's text into one <span class="letter"> per character
   // (spaces stay as plain text nodes so natural word-gaps are preserved).
   // The element's own opacity is forced to 1 immediately afterward since
@@ -846,8 +950,10 @@
   document.querySelectorAll('.hero .script-name').forEach(splitLetters);
   document.querySelectorAll('h2.display.reveal').forEach(splitLetters);
 
-  // Hero entrance: plays immediately on load, each line stepping in after the last
-  var heroTl = new TimelineMax({ defaults:{ ease:'power1.out' } });
+  // Hero entrance: held paused until the splash screen hands off to it (see
+  // the splash intro block further down), so the letter-reveal isn't wasted
+  // playing out behind an opaque splash overlay.
+  var heroTl = new TimelineMax({ defaults:{ ease:'power1.out' }, paused:true });
   heroTl
     .fromTo('.hero .sub.reveal',        0.6, {opacity:0, y:16}, {opacity:1, y:0}, 0.1)
     .fromTo('.hero h1 .script-name .letter', 0.5, {opacity:0, y:16}, {opacity:1, y:0, stagger:0.035}, 0.35)
@@ -856,6 +962,31 @@
     .fromTo('.hero-flourish.reveal',    0.5, {opacity:0, y:12}, {opacity:1, y:0}, 1.1)
     .fromTo('.hero .tagline.reveal',    0.6, {opacity:0, y:14}, {opacity:1, y:0}, 1.25)
     .fromTo('.hero .datebadge.reveal',  0.6, {opacity:0, y:14, scale:.92}, {opacity:1, y:0, scale:1}, 1.45);
+
+  // ---------- Splash intro: date stamps down like a rubber stamp ----------
+  (function splashIntro(){
+    var splash = document.getElementById('splash-screen');
+    var stampBox = document.querySelector('.stamp-box');
+    var ring = document.querySelector('.stamp-ring');
+    if(!splash || !stampBox || !ring) { heroTl.play(); return; }
+
+    var splashTl = new TimelineMax();
+    splashTl
+      // Slam down from oversized/off-angle toward the viewer — fast, hard ease-in.
+      .to(stampBox, 0.32, { opacity:1, scale:1.15, rotation:-6, ease:'power3.in' })
+      // Impact: brief ink-ring flash at the moment of contact.
+      .to(ring, 0.1, { opacity:.6, scale:1 }, '-=0.04')
+      // Compression from the impact, then an elastic settle-wobble to rest.
+      .to(stampBox, 0.12, { scale:0.92, rotation:2, ease:'power1.out' })
+      .to(ring, 0.5, { opacity:0, scale:1.7, ease:'power1.out' }, '<')
+      .to(stampBox, 0.6, { scale:1, rotation:0, ease:'elastic.out(1, 0.5)' })
+      .to(stampBox, 0.7, {}) // hold, fully settled
+      .to(splash, 0.6, {
+        opacity:0, ease:'power1.inOut',
+        onStart:function(){ heroTl.play(); splash.style.pointerEvents = 'none'; },
+        onComplete:function(){ splash.style.display = 'none'; }
+      });
+  })();
 
   // Step-by-step reveal: within each section, elements light up one after another as you scroll to it
   document.querySelectorAll('section:not(.hero)').forEach(function(section){
