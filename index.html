@@ -118,19 +118,21 @@
   .couple-section h2{ font-size:1.9rem; font-weight:500; color:var(--maroon); }
   .couple-section .caption{ font-size:.85rem; color:#6b4a34; max-width:320px; margin:10px auto 0; }
   .stage{ position:relative; width:100%; max-width:380px; margin:26px auto 0; overflow:visible; }
-  .stage svg{
-    width:100%; height:auto; display:block; overflow:visible;
-    /* Smooths between raw deviceorientation readings for the mobile tilt-
-       parallax effect (JS sets the actual transform); GSAP's entrance
-       animation targets the .stage DIV, not this svg, so there's no clash. */
-    transition:transform .15s ease-out;
-  }
+  .stage svg{ width:100%; height:auto; display:block; overflow:visible; }
 
   /* Idle motion (sway/blink/garland-swing) has been turned off per request —
      both couple illustrations render as static artwork now. To re-enable later,
      restore an `animation:` declaration on the relevant class. */
   .groom-sway, .bride-sway, .blink-groom, .blink-bride, .garland-swing{
     animation:none;
+  }
+
+  /* Mobile tilt-parallax targets these two decorative accents instead of the
+     couple themselves — the people stay still and dignified, the garland and
+     string lights drift/sway slightly as the phone tilts. JS sets the actual
+     transform; this just smooths between raw deviceorientation readings. */
+  .garland-swing, .string-lights{
+    transition:transform .2s ease-out;
   }
 
   /* ---------- DETAIL CARDS ---------- */
@@ -681,7 +683,7 @@
         </g>
 
         <!-- string lights -->
-        <g stroke="#E8C468" stroke-width="1.4" fill="#E8C468" opacity=".85">
+        <g class="string-lights" stroke="#E8C468" stroke-width="1.4" fill="#E8C468" opacity=".85">
           <path d="M120,60 Q200,20 300,60" fill="none"/>
           <circle cx="150" cy="49" r="3"/>
           <circle cx="200" cy="34" r="3"/>
@@ -1110,21 +1112,28 @@
     applyTheme(isDark ? 'light' : 'dark');
   });
 
-  // ---------- Mobile: device-tilt parallax on the couple illustrations ----------
+  // ---------- Mobile: device-tilt parallax on decorative accents ----------
+  // The couple themselves stay static and dignified; only the floral garland
+  // (traditional scene) and the string lights (indo-western scene) sway and
+  // drift slightly as the phone tilts, giving the atmosphere around them a
+  // sense of responsiveness without moving the people.
   if(isMobile){
-    var tiltTargets = document.querySelectorAll('.stage svg');
+    var decorTargets = document.querySelectorAll('.garland-swing, .string-lights');
 
     function applyTilt(beta, gamma){
-      if(!tiltTargets.length) return;
+      if(!decorTargets.length) return;
       // beta: front-back tilt (0 = flat, ~45-60 = typical hand-held reading
       // angle). Subtract that baseline so "naturally holding the phone"
-      // reads as roughly level rather than already maxed-out.
-      // Wider clamp + smaller divisor = more responsive, more visible tilt.
-      // Tighter perspective (was 700px) exaggerates the same angle further.
-      var tiltX = Math.max(-18, Math.min(18, (beta - 50) / 2.2));
-      var tiltY = Math.max(-18, Math.min(18, gamma / 2.2));
-      var transform = 'perspective(450px) rotateX(' + (-tiltX) + 'deg) rotateY(' + tiltY + 'deg) scale(1.04)';
-      tiltTargets.forEach(function(svg){ svg.style.transform = transform; });
+      // reads as roughly level rather than already maxed-out. Normalized to
+      // a -1..1 range, then scaled down to a few px/deg of drift — enough to
+      // read as "swaying in a breeze," not a dramatic rotation.
+      var normX = Math.max(-1, Math.min(1, (beta - 50) / 25));
+      var normY = Math.max(-1, Math.min(1, gamma / 25));
+      var dx = normY * 7;
+      var dy = normX * 5;
+      var rot = normY * 5;
+      var transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg)';
+      decorTargets.forEach(function(el){ el.style.transform = transform; });
     }
 
     function onDeviceOrientation(e){
