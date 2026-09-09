@@ -619,29 +619,32 @@
         <ellipse cx="190" cy="322" rx="140" ry="14" fill="#000" opacity="0.06"/>
         <!-- Groom (left) -->
         <g class="groom-sway">
-          <!-- legs / veshti (warm ivory, gold zari border) -->
+          <!-- legs / veshti (warm ivory, gold zari border) — stays planted;
+               only the upper body leans for the kiss gesture, not the legs. -->
           <path d="M150,230 Q160,300 140,318 L180,318 Q182,270 190,230 Z" fill="#F5E6C8" stroke="#C9A227" stroke-width="2"/>
-          <!-- torso shirt (white, thin gold outline so it reads as a separate garment) -->
-          <path d="M148,150 Q190,138 192,150 L196,232 Q170,244 146,232 Z" fill="#FFFFFF" stroke="#C9A227" stroke-width="1.5"/>
-          <!-- angavastram: closed teardrop shape anchored at the shoulder/neck line and
-               tapering to a point tucked inside the torso hem, instead of a free-floating
-               stroke — reads as a draped shawl rather than a detached limb. -->
-          <path d="M163,146 Q140,190 150,224 Q160,190 172,148 Z" fill="#A31621" stroke="#7A1220" stroke-width="1"/>
-          <!-- neck -->
-          <rect x="164" y="128" width="16" height="18" fill="#E8B98A"/>
-          <!-- head -->
-          <circle cx="172" cy="108" r="30" fill="#F0C39B"/>
-          <!-- hair -->
-          <path d="M144,100 Q150,72 172,72 Q198,72 200,100 Q198,84 172,84 Q148,84 144,100 Z" fill="#2b1a12"/>
-          <!-- eyes -->
-          <g class="blink-groom">
-            <ellipse cx="163" cy="106" rx="3.4" ry="2.4" fill="#2b1a12"/>
-            <ellipse cx="181" cy="106" rx="3.4" ry="2.4" fill="#2b1a12"/>
+          <g class="groom-upper">
+            <!-- torso shirt (white, thin gold outline so it reads as a separate garment) -->
+            <path d="M148,150 Q190,138 192,150 L196,232 Q170,244 146,232 Z" fill="#FFFFFF" stroke="#C9A227" stroke-width="1.5"/>
+            <!-- angavastram: closed teardrop shape anchored at the shoulder/neck line and
+                 tapering to a point tucked inside the torso hem, instead of a free-floating
+                 stroke — reads as a draped shawl rather than a detached limb. -->
+            <path d="M163,146 Q140,190 150,224 Q160,190 172,148 Z" fill="#A31621" stroke="#7A1220" stroke-width="1"/>
+            <!-- neck -->
+            <rect x="164" y="128" width="16" height="18" fill="#E8B98A"/>
+            <!-- head -->
+            <circle cx="172" cy="108" r="30" fill="#F0C39B"/>
+            <!-- hair -->
+            <path d="M144,100 Q150,72 172,72 Q198,72 200,100 Q198,84 172,84 Q148,84 144,100 Z" fill="#2b1a12"/>
+            <!-- eyes -->
+            <g class="blink-groom">
+              <ellipse cx="163" cy="106" rx="3.4" ry="2.4" fill="#2b1a12"/>
+              <ellipse cx="181" cy="106" rx="3.4" ry="2.4" fill="#2b1a12"/>
+            </g>
+            <!-- smile -->
+            <path d="M163,118 Q172,124 181,118" stroke="#7a3b1c" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <!-- tilak -->
+            <line x1="172" y1="92" x2="172" y2="98" stroke="#A31621" stroke-width="2"/>
           </g>
-          <!-- smile -->
-          <path d="M163,118 Q172,124 181,118" stroke="#7a3b1c" stroke-width="2" fill="none" stroke-linecap="round"/>
-          <!-- tilak -->
-          <line x1="172" y1="92" x2="172" y2="98" stroke="#A31621" stroke-width="2"/>
         </g>
 
         <!-- Bride (right) -->
@@ -682,11 +685,14 @@
           </g>
         </g>
 
-        <!-- Kiss moment: heart pop + cheek blush, triggered on scroll-in -->
+        <!-- Kiss moment: heart pop + cheek blush, triggered on scroll-in.
+             Positioned at the midpoint between where the groom's leaned mouth
+             lands (~187,121, after an 8° bend from the waist pivot) and the
+             bride's cheek (~220,114). -->
         <g class="kiss-heart">
-          <path transform="translate(196,99)" d="M6,10.5 C1,7 -1,3.5 1,1.5 C2.5,0 5,0.5 6,2.5 C7,0.5 9.5,0 11,1.5 C13,3.5 11,7 6,10.5 Z" fill="#E8C468"/>
+          <path transform="translate(198,110)" d="M6,10.5 C1,7 -1,3.5 1,1.5 C2.5,0 5,0.5 6,2.5 C7,0.5 9.5,0 11,1.5 C13,3.5 11,7 6,10.5 Z" fill="#E8C468"/>
         </g>
-        <circle class="kiss-blush" cx="222" cy="116" r="5" fill="#f2a9b8"/>
+        <circle class="kiss-blush" cx="220" cy="114" r="5" fill="#f2a9b8"/>
       </svg>
     </div>
   </section>
@@ -1166,14 +1172,18 @@
   (function(){
     var section = document.querySelector('.couple-section');
     if(!section) return;
-    var groom = section.querySelector('.groom-sway');
+    var groom = section.querySelector('.groom-upper');
     var heart = section.querySelector('.kiss-heart');
     var blush = section.querySelector('.kiss-blush');
     if(!groom) return;
 
     var lean = { deg: 0 };
     function applyLean(){
-      groom.style.transform = 'translate(163px,319px) rotate(' + lean.deg + 'deg) translate(-163px,-319px)';
+      // Pivot at (172,231) — his waist, where torso meets legs — not his
+      // feet. Only .groom-upper (torso+head) is targeted now, so this reads
+      // as bending forward from the waist with his legs staying planted,
+      // instead of the whole rigid figure swinging from ground level.
+      groom.style.transform = 'translate(172px,231px) rotate(' + lean.deg + 'deg) translate(-172px,-231px)';
     }
 
     var kissTl = new TimelineMax({
