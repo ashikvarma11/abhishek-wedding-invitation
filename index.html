@@ -57,7 +57,40 @@
   .hero svg.frame-top{ width:100%; max-width:340px; height:auto; margin-bottom:10px; }
   .hero .sub{ font-size:.8rem; letter-spacing:.18em; text-transform:uppercase; color:var(--light-gold); opacity:.9; }
   .hero h1{ font-size:1.6rem; font-weight:500; line-height:1.3; margin:14px 0 6px; }
-  .hero h1 .script-name{ font-family:'Great Vibes', cursive; font-size:3rem; display:block; line-height:1.15; }
+  .hero h1 .script-name{ font-family:'Great Vibes', cursive; font-size:3rem; display:block; line-height:1.15; position:relative; }
+
+  /* Gold shimmer sweep across each couple name — a duplicate, unsplit text
+     layer (content:attr(data-full-text)) laid exactly over the real letters.
+     It has to be a separate continuous text run rather than reusing the
+     .letter spans: background-clip:text only clips to an element's OWN
+     glyphs, and since the visible name is split into individual letter
+     spans for the reveal animation, the parent itself has no direct text of
+     its own to clip a shared gradient against. This overlay sidesteps that
+     by giving the shimmer its own single, continuous string to clip to. */
+  .hero h1 .script-name::after{
+    content:attr(data-full-text);
+    position:absolute; inset:0;
+    display:block; width:100%; text-align:center;
+    pointer-events:none;
+    background:linear-gradient(100deg,
+      transparent 40%,
+      rgba(255,255,255,.85) 48%,
+      rgba(255,244,214,1) 50%,
+      rgba(255,255,255,.85) 52%,
+      transparent 60%
+    );
+    background-size:300% 100%;
+    background-position:-100% 0;
+    background-clip:text; -webkit-background-clip:text;
+    color:transparent; -webkit-text-fill-color:transparent;
+    animation:name-shimmer 7s ease-in-out infinite;
+    animation-delay:2.5s;
+  }
+  @keyframes name-shimmer{
+    0%   { background-position:-100% 0; }
+    20%  { background-position:200% 0; }
+    100% { background-position:200% 0; }
+  }
   .hero .amp{ display:block; color:var(--light-gold); font-style:italic; font-size:1.4rem; margin:6px 0; font-family:'Cormorant Garamond', serif; }
   .hero p.tagline{ font-size:.95rem; color:#f2e6c9; max-width:340px; margin:14px auto 0; line-height:1.6; }
   .hero .datebadge{
@@ -118,7 +151,13 @@
   .couple-section h2{ font-size:1.9rem; font-weight:500; color:var(--maroon); }
   .couple-section .caption{ font-size:.85rem; color:#6b4a34; max-width:320px; margin:10px auto 0; }
   .stage{ position:relative; width:100%; max-width:380px; margin:26px auto 0; overflow:visible; }
-  .stage svg{ width:100%; height:auto; display:block; overflow:visible; }
+  .stage svg{
+    width:100%; height:auto; display:block; overflow:visible;
+    /* Smooths between raw deviceorientation readings for the mobile tilt-
+       parallax effect (JS sets the actual transform); GSAP's entrance
+       animation targets the .stage DIV, not this svg, so there's no clash. */
+    transition:transform .15s ease-out;
+  }
 
   /* Idle motion (sway/blink/garland-swing) has been turned off per request —
      both couple illustrations render as static artwork now. To re-enable later,
@@ -233,28 +272,6 @@
   }
 
   /* ---------- MUSIC TOGGLE ---------- */
-  .music-toggle{
-    position:fixed; bottom:20px; right:20px; z-index:50;
-    width:52px; height:52px; border-radius:50%;
-    background:linear-gradient(160deg, var(--maroon), #5c0d16);
-    border:1.5px solid var(--gold);
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 8px 22px -8px rgba(0,0,0,.5);
-    cursor:pointer;
-  }
-  .music-toggle svg{ width:22px; height:22px; }
-  .music-toggle .disc{
-    position:absolute; inset:0; border-radius:50%;
-    border:1px dashed rgba(232,196,104,.5);
-    animation:disc-spin 6s linear infinite; animation-play-state:paused;
-  }
-  .music-toggle.playing .disc{ animation-play-state:running; }
-  @keyframes disc-spin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
-  .music-toggle .icon-note{ display:block; }
-  .music-toggle .icon-pause{ display:none; }
-  .music-toggle.playing .icon-note{ display:none; }
-  .music-toggle.playing .icon-pause{ display:block; }
-
   /* ---------- THEME TOGGLE (top right) ---------- */
   .theme-toggle{
     position:fixed; top:20px; right:20px; z-index:60;
@@ -362,6 +379,11 @@
     border-color:var(--gold);
   }
 
+  /* Theme toggle itself — otherwise stays maroon even at night */
+  html[data-theme="dark"] .theme-toggle{
+    background:linear-gradient(160deg,#1c1148,#0d0730);
+  }
+
   /* ========== SKY OVERLAY ========== */
   #sky-overlay{
     position:fixed; inset:0; z-index:45; pointer-events:none;
@@ -417,20 +439,9 @@
   </svg>
 </div>
 
-<!-- Background music toggle (uses the uploaded flute cover) -->
-<audio id="bg-music" src="wedding-song.mp3" loop preload="auto"></audio>
-<button class="music-toggle" id="music-toggle" type="button" aria-label="Play background music">
-  <span class="disc"></span>
-  <svg class="icon-note" viewBox="0 0 24 24" fill="none" stroke="#E8C468" stroke-width="1.8">
-    <path d="M9 18V5l12-2v13" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="6" cy="18" r="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="18" cy="16" r="3" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  <svg class="icon-pause" viewBox="0 0 24 24" fill="#E8C468">
-    <rect x="6" y="5" width="4" height="14" rx="1"/>
-    <rect x="14" y="5" width="4" height="14" rx="1"/>
-  </svg>
-</button>
+<!-- Background music: plays automatically (see JS below for the browser
+     autoplay-restriction fallback), no visible control by request. -->
+<audio id="bg-music" src="https://cdn.pixabay.com/audio/2026/05/07/audio_c80c94bb29.mp3" loop autoplay preload="auto"></audio>
 
 <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to night mode">
   <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="#E8C468" stroke-width="1.8">
@@ -825,6 +836,17 @@
   // ---------- GSAP (TweenMax/TimelineMax) + ScrollTrigger animations ----------
   gsap.registerPlugin(ScrollTrigger);
 
+  // ---------- Mobile-only interactive touches ----------
+  // Device-tilt parallax, haptic pulses, and the shake easter egg below only
+  // make sense on an actual phone in hand — gated behind a coarse-pointer
+  // check (present the same for stylus/touch) so desktop/trackpad visitors
+  // never see or trigger any of it.
+  var isMobile = window.matchMedia('(pointer: coarse)').matches;
+
+  function hapticPulse(ms){
+    if(isMobile && navigator.vibrate){ navigator.vibrate(ms || 10); }
+  }
+
   // Splits an element's text into one <span class="letter"> per character
   // (spaces stay as plain text nodes so natural word-gaps are preserved).
   // The element's own opacity is forced to 1 immediately afterward since
@@ -833,6 +855,7 @@
   // .reveal class the element itself might still carry.
   function splitLetters(el){
     var text = el.textContent;
+    el.setAttribute('data-full-text', text);
     el.textContent = '';
     var frag = document.createDocumentFragment();
     text.split('').forEach(function(ch){
@@ -961,6 +984,8 @@
 
       beads.forEach(function(b){
         var shouldBeLit = pct >= b.frac - 0.01;
+        var wasLit = b.el.classList.contains('lit');
+        if(shouldBeLit && !wasLit){ hapticPulse(6); }
         b.el.classList.toggle('lit', shouldBeLit);
       });
     }
@@ -987,9 +1012,10 @@
   // value is swapped in mid-transition, then slides up into place from
   // below. Skips the tween entirely when the value hasn't changed, so it
   // only animates on the seconds/minutes/etc. that actually tick over.
-  function flipDigit(el, newText){
+  function flipDigit(el, newText, haptic){
     if(el.dataset.val === newText) return;
     el.dataset.val = newText;
+    if(haptic){ hapticPulse(8); }
     gsap.to(el, {
       duration:0.22, y:-10, opacity:0, ease:'power2.in',
       onComplete:function(){
@@ -1009,7 +1035,11 @@
       const h = Math.floor((diff/(1000*60*60))%24);
       const m = Math.floor((diff/(1000*60))%60);
       const s = Math.floor((diff/1000)%60);
-      flipDigit(document.getElementById(ids.d), String(d));
+      // Haptic only on the days digit — the seconds/minutes/hours digits flip
+      // constantly, and buzzing on every one of those would be the opposite
+      // of subtle. The days digit only changes once every 24 hours, so it
+      // reads as an actual milestone worth a tap of feedback.
+      flipDigit(document.getElementById(ids.d), String(d), true);
       flipDigit(document.getElementById(ids.h), String(h).padStart(2,'0'));
       flipDigit(document.getElementById(ids.m), String(m).padStart(2,'0'));
       flipDigit(document.getElementById(ids.s), String(s).padStart(2,'0'));
@@ -1032,23 +1062,35 @@
     'Alakapuri Convention Center, Trivandrum',
     '2026-11-02T18:00:00+05:30', '2026-11-02T22:00:00+05:30'
   );
-
-  // ---------- Background music (uploaded flute cover) ----------
-  const bgMusic = document.getElementById('bg-music');
-  const musicBtn = document.getElementById('music-toggle');
-
-  musicBtn.addEventListener('click', function(){
-    const isPlaying = musicBtn.classList.contains('playing');
-    if(isPlaying){
-      bgMusic.pause();
-      musicBtn.classList.remove('playing');
-      musicBtn.setAttribute('aria-label','Play background music');
-    } else {
-      bgMusic.play().catch(()=>{ /* playback blocked until user gesture; button click counts as one */ });
-      musicBtn.classList.add('playing');
-      musicBtn.setAttribute('aria-label','Pause background music');
-    }
+  document.getElementById('reception-cal').addEventListener('click', function(){
+    hapticPulse(15);
   });
+
+  // ---------- Background music ----------
+  // Browsers block autoplay-with-sound until the visitor has interacted with
+  // the page at all, so: try to play immediately, and if that's rejected,
+  // start it silently on the very first tap/click/scroll/key anywhere on the
+  // page instead. No visible control, per request — this just makes the
+  // "wait for interaction" fallback invisible rather than needing a button.
+  const bgMusic = document.getElementById('bg-music');
+
+  function tryPlayMusic(){
+    var p = bgMusic.play();
+    if(p && typeof p.catch === 'function'){
+      p.catch(function(){
+        var startOnce = function(){
+          bgMusic.play().catch(function(){});
+          ['pointerdown','touchstart','keydown','scroll'].forEach(function(evt){
+            window.removeEventListener(evt, startOnce);
+          });
+        };
+        ['pointerdown','touchstart','keydown','scroll'].forEach(function(evt){
+          window.addEventListener(evt, startOnce, { once:true, passive:true });
+        });
+      });
+    }
+  }
+  tryPlayMusic();
 
   // ---------- Night theme + sky overlay ----------
   const themeToggle = document.getElementById('theme-toggle');
@@ -1110,6 +1152,120 @@
     var isDark = rootEl.getAttribute('data-theme') === 'dark';
     applyTheme(isDark ? 'light' : 'dark');
   });
+
+  // ---------- Mobile: device-tilt parallax on the couple illustrations ----------
+  if(isMobile){
+    var tiltTargets = document.querySelectorAll('.stage svg');
+
+    function applyTilt(beta, gamma){
+      if(!tiltTargets.length) return;
+      // beta: front-back tilt (0 = flat, ~45-60 = typical hand-held reading
+      // angle). Subtract that baseline so "naturally holding the phone"
+      // reads as roughly level rather than already maxed-out.
+      var tiltX = Math.max(-6, Math.min(6, (beta - 50) / 6));
+      var tiltY = Math.max(-6, Math.min(6, gamma / 6));
+      var transform = 'perspective(700px) rotateX(' + (-tiltX) + 'deg) rotateY(' + tiltY + 'deg)';
+      tiltTargets.forEach(function(svg){ svg.style.transform = transform; });
+    }
+
+    function onDeviceOrientation(e){
+      if(e.beta === null || e.gamma === null) return;
+      applyTilt(e.beta, e.gamma);
+    }
+
+    // ---------- Mobile: shake-to-reveal easter egg ----------
+    var lastAccel = null;
+    var lastShakeAt = 0;
+
+    function triggerPetalBurst(){
+      var layer = document.createElement('div');
+      layer.setAttribute('aria-hidden', 'true');
+      layer.style.cssText = 'position:fixed; inset:0; pointer-events:none; z-index:80; overflow:hidden;';
+      document.body.appendChild(layer);
+
+      var colors = ['#E8C468', '#A31621', '#4C6444', '#fdeec0'];
+      for(var i = 0; i < 16; i++){
+        var petal = document.createElement('div');
+        var size = 7 + Math.random() * 7;
+        petal.style.cssText =
+          'position:absolute; top:-18px; left:' + (Math.random() * 100) + '%;' +
+          'width:' + size + 'px; height:' + size + 'px; border-radius:50% 0 50% 50%;' +
+          'background:' + colors[i % colors.length] + '; opacity:.9;';
+        layer.appendChild(petal);
+        gsap.to(petal, {
+          y: window.innerHeight + 40,
+          x: '+=' + (Math.random() * 90 - 45),
+          rotation: Math.random() * 360,
+          opacity: 0,
+          duration: 2.4 + Math.random() * 1.4,
+          delay: Math.random() * 0.5,
+          ease: 'power1.in'
+        });
+      }
+      setTimeout(function(){ layer.remove(); }, 4500);
+
+      var note = document.createElement('div');
+      note.setAttribute('aria-hidden', 'true');
+      note.textContent = 'You found it \uD83E\uDD0D Thank you for celebrating with us — Abhishek & Aswani';
+      note.style.cssText =
+        'position:fixed; left:50%; bottom:14%; transform:translateX(-50%); opacity:0;' +
+        'max-width:78%; text-align:center; font-family:"Cormorant Garamond",serif; font-style:italic;' +
+        'font-size:1rem; color:#fff8ea; background:rgba(0,0,0,.4); padding:10px 18px;' +
+        'border-radius:20px; z-index:81; pointer-events:none;';
+      document.body.appendChild(note);
+      gsap.to(note, {
+        opacity:1, duration:0.5, ease:'power1.out',
+        onComplete:function(){
+          gsap.to(note, { opacity:0, duration:0.8, delay:2.2, onComplete:function(){ note.remove(); } });
+        }
+      });
+
+      hapticPulse(25);
+    }
+
+    function onDeviceMotion(e){
+      var acc = e.accelerationIncludingGravity;
+      if(!acc || acc.x === null) return;
+      if(lastAccel){
+        var delta = Math.abs(acc.x - lastAccel.x) + Math.abs(acc.y - lastAccel.y) + Math.abs(acc.z - lastAccel.z);
+        var now = Date.now();
+        // Debounced well past the shake's own duration so one shake gesture
+        // can't retrigger itself, and gives a natural "cooldown" before it
+        // can fire again.
+        if(delta > 28 && now - lastShakeAt > 3500){
+          lastShakeAt = now;
+          triggerPetalBurst();
+        }
+      }
+      lastAccel = acc;
+    }
+
+    // Both DeviceOrientationEvent and DeviceMotionEvent require an explicit
+    // permission grant on iOS 13+, and that grant can only be requested from
+    // inside a user-gesture handler — so both are requested together on the
+    // guest's first touch anywhere on the page. On Android/other browsers
+    // that don't gate these behind a permission prompt, this just attaches
+    // the listeners directly.
+    function enableMotionFeatures(){
+      if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+        DeviceOrientationEvent.requestPermission().then(function(state){
+          if(state === 'granted'){ window.addEventListener('deviceorientation', onDeviceOrientation); }
+        }).catch(function(){});
+      } else {
+        window.addEventListener('deviceorientation', onDeviceOrientation);
+      }
+
+      if(typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
+        DeviceMotionEvent.requestPermission().then(function(state){
+          if(state === 'granted'){ window.addEventListener('devicemotion', onDeviceMotion); }
+        }).catch(function(){});
+      } else {
+        window.addEventListener('devicemotion', onDeviceMotion);
+      }
+    }
+
+    window.addEventListener('touchstart', enableMotionFeatures, { once:true, passive:true });
+  }
 </script>
 </body>
 </html>
