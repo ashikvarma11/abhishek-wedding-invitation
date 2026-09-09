@@ -1077,6 +1077,8 @@
       beads.push({ el: circle, frac: frac });
     }
 
+    var lastBeadHapticAt = 0;
+
     function updateGarlandProgress(){
       var scrollTop = window.scrollY || document.documentElement.scrollTop;
       var max = document.documentElement.scrollHeight - window.innerHeight;
@@ -1085,9 +1087,25 @@
       fill.style.strokeDashoffset = totalLen * (1 - pct);
 
       beads.forEach(function(b){
-        var shouldBeLit = pct >= b.frac - 0.01;
         var wasLit = b.el.classList.contains('lit');
-        if(shouldBeLit && !wasLit){ hapticPulse(6); }
+        // Hysteresis: lighting and unlighting use different thresholds, with
+        // a gap between them. Without this, momentum-scroll jitter of even a
+        // fraction of a percent right at the boundary makes the bead flicker
+        // lit/unlit repeatedly, firing a haptic pulse on every flicker instead
+        // of once per genuine crossing.
+        var shouldBeLit = wasLit ? (pct >= b.frac - 0.04) : (pct >= b.frac - 0.01);
+
+        if(shouldBeLit && !wasLit){
+          // Cooldown so a fast fling that crosses several bead thresholds in
+          // one scroll tick doesn't fire overlapping vibrate() calls — each
+          // new call cancels/restarts the previous one, so firing them faster
+          // than the device can render them just drops pulses silently.
+          var now = Date.now();
+          if(now - lastBeadHapticAt > 70){
+            hapticPulse(6);
+            lastBeadHapticAt = now;
+          }
+        }
         b.el.classList.toggle('lit', shouldBeLit);
       });
     }
